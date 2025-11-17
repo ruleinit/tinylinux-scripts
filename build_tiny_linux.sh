@@ -429,6 +429,7 @@ prepare_portage()
         "app-alternatives/gzip pigz"
         "app-alternatives/tar gnu"
         "app-arch/tar acl"
+        "dev-cpp/eigen openmp"
         "dev-lang/python xml ssl"
         "dev-libs/libtomcrypt libtommath"
         "dev-libs/libverto libev"
@@ -574,6 +575,7 @@ emerge_basic_packages()
     [[ $(uname -m) = x86_64 ]] && SYSLINUX_PKG="dev-lang/nasm syslinux"
 
     local HOST_PKGS=(
+        binutils-libs
         dev-libs/glib
         dosfstools
         dropbear
@@ -884,7 +886,7 @@ build_newroot()
 
     install_package busybox "make-symlinks mdev nfs pam savedconfig"
     rm -rf "${NEWROOT}-busybox"
-    mkdir "${NEWROOT}-busybox" # workaround for busybox symlinks clashing with merged bin/sbin/lib
+    mkdir -p "${NEWROOT}-busybox"/{bin,sbin,usr/bin,usr/sbin} # workaround for busybox symlinks clashing with merged bin/sbin/lib
     NEWROOT="${NEWROOT}-busybox" install_package busybox "make-symlinks mdev nfs savedconfig" --nodeps
     rm -f "$NEWROOT"/etc/portage/savedconfig/sys-apps/._cfg* # Avoid excess of portage messages
     create_busybox_symlinks
@@ -1019,7 +1021,7 @@ build_newroot()
     # Prepare locales
     [[ -d "$NEWROOT"/usr/lib/locale ]] && die "Unexpected directory: $NEWROOT/usr/lib/locale"
     [[ -d "$NEWROOT"/usr/lib64/locale ]] && die "Unexpected directory: $NEWROOT/usr/lib64/locale"
-    locale-gen -c "$BUILDSCRIPTS/locale.gen" -d "$NEWROOT"
+    locale-gen --config="$BUILDSCRIPTS/locale.gen" --prefix="$NEWROOT"
     if [[ -d "$NEWROOT"/usr/lib && -d "$NEWROOT"/usr/lib64 && -d "$NEWROOT"/usr/lib/locale && ! -d "$NEWROOT"/usr/lib64/locale ]]; then
         mv "$NEWROOT"/usr/lib/locale "$NEWROOT"/usr/lib64/locale
     fi
@@ -1441,6 +1443,8 @@ make_squashfs()
 	var
 	EOF
     find "$NEWROOT"/usr/include/ -mindepth 1 -maxdepth 1 | sed "s/^\/newroot\/// ; /^usr\/include\/python/d" >> /tmp/excludelist
+    find "$NEWROOT"/usr -type d -name "__pycache__" 2>/dev/null | sed "s/^\/newroot\///" >> /tmp/excludelist
+    find "$NEWROOT"/usr -name "*.pyc" -o -name "*.pyo" 2>/dev/null | sed "s/^\/newroot\///" >> /tmp/excludelist
     [[ $TEGRABUILD ]] && echo "etc" >> /tmp/excludelist
     mksquashfs "$NEWROOT"/ "$INSTALL/$SQUASHFS" -noappend -processors "$MSQJOBS" -comp xz -ef /tmp/excludelist -wildcards
 
