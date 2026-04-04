@@ -1,1 +1,53 @@
+name: Build Full Profile
 
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space
+        run: |
+          echo "Before clearing:"
+          df -h
+          # Remove large pre-installed software to free up space
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/lib/jvm
+          sudo docker image prune --all --force
+          echo "After clearing:"
+          df -h
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools zip lbzip2
+
+      - name: Build Full Profile
+        run: |
+          # The script requires root privileges
+          sudo ./build_tiny_linux.sh full
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-zip
+          path: buildroot/full.zip
