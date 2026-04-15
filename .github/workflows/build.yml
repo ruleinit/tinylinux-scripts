@@ -44,7 +44,7 @@ jobs:
       - name: Build Full Profile
         run: |
           # The script requires root privileges
-          sudo ./build_tiny_linux.sh -v 20.10.1 full
+          sudo ./build_tiny_linux.sh full
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
